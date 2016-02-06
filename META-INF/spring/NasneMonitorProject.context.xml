@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:osgi="http://www.springframework.org/schema/osgi" xmlns:wlevs="http://www.bea.com/ns/wlevs/spring"
+       xmlns:jdbc="http://www.oracle.com/ns/ocep/jdbc" xmlns:hadoop="http://www.oracle.com/ns/oep/hadoop"
+       xmlns:nosqldb="http://www.oracle.com/ns/oep/nosqldb" xmlns:hbase="http://www.oracle.com/ns/oep/hbase"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans   http://www.springframework.org/schema/beans/spring-beans.xsd   http://www.springframework.org/schema/osgi   http://www.springframework.org/schema/osgi/spring-osgi.xsd   http://www.bea.com/ns/wlevs/spring   http://www.bea.com/ns/wlevs/spring/ocep-epn.xsd   http://www.oracle.com/ns/ocep/jdbc   http://www.oracle.com/ns/ocep/jdbc/ocep-jdbc.xsd   http://www.oracle.com/ns/oep/hadoop   http://www.oracle.com/ns/oep/hadoop/oep-hadoop.xsd   http://www.oracle.com/ns/oep/nosqldb   http://www.oracle.com/ns/oep/nosqldb/oep-nosqldb.xsd   http://www.oracle.com/ns/oep/hbase   http://www.oracle.com/ns/oep/hbase/oep-hbase.xsd">
+    <wlevs:event-type-repository>
+        <wlevs:event-type type-name="NasneHdd">
+            <wlevs:class>chiroito.nasne.iface.bean.NasneHddBean</wlevs:class>
+        </wlevs:event-type>
+    </wlevs:event-type-repository>
+    
+    <wlevs:adapter id="rest-inbound-nasne-adapter" provider="rest-inbound">
+        <wlevs:listener ref="rowHddChannel"/>
+        <wlevs:instance-property name="jsonMapper" ref="json-mapper-rest-inbound-adapter"/>
+        <wlevs:instance-property name="eventTypeName" value="NasneHdd"/>
+        <wlevs:instance-property name="contextPath" value="/nasne"/>
+    </wlevs:adapter>
+    
+    <bean id="json-mapper-rest-inbound-adapter" class="com.oracle.cep.mappers.jaxb.JAXBMapperFactory"
+          factory-method="create"/>
+    <wlevs:channel id="rowHddChannel" event-type="NasneHdd" max-threads="4">
+        <wlevs:listener ref="mountedHddProcessor"/>
+    </wlevs:channel>
+    
+    <wlevs:processor id="latestHddProcessor"/>
+    <wlevs:channel id="latestHddChannel" event-type="NasneHdd" batching="true" max-threads="1" max-size="0">
+        <wlevs:listener ref="librato-outbound-hdd-adapter"/>
+        <wlevs:source ref="latestHddProcessor"/>
+    </wlevs:channel>
+    
+    <wlevs:event-bean id="storeHddVolumeBean" class="chiroito.nasne.io.hdd.StoreHddVolumeLibrato">
+        <wlevs:instance-property name="propertyFilePath" value="librato.properties"/>
+    </wlevs:event-bean>
+    
+    <wlevs:adapter id="librato-outbound-hdd-adapter" class="chiroito.nasne.oep.adapter.StoreHddVolumeAdapter">
+        <wlevs:instance-property name="storeHddVolume" ref="storeHddVolumeBean" />
+    </wlevs:adapter>
+    
+    <wlevs:processor id="mountedHddProcessor"/>
+    <wlevs:channel id="mountedHddChannel" event-type="NasneHdd">
+        <wlevs:listener ref="latestHddProcessor"/>
+        <wlevs:source ref="mountedHddProcessor"/>
+    </wlevs:channel>
+</beans>

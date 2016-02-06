@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wlevs:config xmlns:wlevs="http://www.bea.com/ns/wlevs/config/application">
+  <processor>
+    <name>latestHddProcessor</name>
+    <rules>
+      <query id="ExampleQuery"><![CDATA[ 
+ select * from mountedHddChannel [partition by serialNumber rows 1 range 360 slide 360 seconds]]]></query>
+    </rules>
+  </processor>
+  <processor>
+    <name>mountedHddProcessor</name>
+    <rules>
+      <query id="ExampleQuery"><![CDATA[ 
+ select * from rowHddChannel where mountStatus = TRUE ]]></query>
+    </rules>
+  </processor>
+  <event-bean>
+    <name>librato-outbound-hdd-adapter</name>
+  </event-bean>
+  <json-mapper>
+    <name>json-mapper-rest-inbound-adapter</name>
+    <event-type-name>NasneHdd</event-type-name>
+    <media-type>application/json</media-type>
+  </json-mapper>
+</wlevs:config>
